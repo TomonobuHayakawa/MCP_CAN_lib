@@ -73,9 +73,8 @@ class MCP_CAN
     INT8U mcp2515_setCANCTRL_Mode(const INT8U newmode);                 // Set mode
     INT8U mcp2515_requestNewMode(const INT8U newmode);                  // Set mode
     INT8U mcp2515_configRate(const INT8U canSpeed,                      // Set baudrate
-
                              const INT8U canClock);
-                             
+
     INT8U mcp2515_init(const INT8U canIDMode,                           // Initialize Controller
                        const INT8U canSpeed,
                        const INT8U canClock);
@@ -89,7 +88,7 @@ class MCP_CAN
                            const INT32U id );
 
     void mcp2515_read_id( const INT8U mcp_addr,                         // Read CAN ID
-      INT8U* ext,
+                                INT8U* ext,
                                 INT32U* id );
 
     void mcp2515_write_canMsg( const INT8U buffer_sidh_addr );          // Write CAN message

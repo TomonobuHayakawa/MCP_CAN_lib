@@ -37,8 +37,8 @@ byte dlc;
 byte rxBuf[8];
 
 // CAN Interrupt and Chip Select
-#define CAN0_INT 2                              // Set CAN0 INT to pin 2
-MCP_CAN CAN0(9);                                // Set CAN0 CS to pin 9
+#define CAN0_INT 20                              // Set CAN0 INT to pin 20
+MCP_CAN CAN0(19);                                // Set CAN0 CS to pin 19
 
 
 void setup()

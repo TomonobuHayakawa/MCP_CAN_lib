@@ -4,7 +4,7 @@
 #include <mcp_can.h>
 #include <SPI.h>
 
-MCP_CAN CAN0(10);     // Set CS to pin 10
+MCP_CAN CAN0(19);     // Set CS to pin 19
 
 void setup()
 {

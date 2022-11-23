@@ -23,6 +23,10 @@
 */
 #include "mcp_can.h"
 
+#if defined(ARDUINO_ARCH_SPRESENSE)
+#define SPI SPI5
+#endif
+
 #define spi_readwrite SPI.transfer
 #define spi_read() spi_readwrite(0x00)
 
@@ -107,7 +111,7 @@ void MCP_CAN::mcp2515_setRegisterS(const INT8U address, const INT8U values[], co
        
     for (i=0; i<n; i++) 
         spi_readwrite(values[i]);
-	
+
     MCP2515_UNSELECT();
     SPI.endTransaction();
 }
@@ -169,37 +173,37 @@ INT8U MCP_CAN::setMode(const INT8U opMode)
 *********************************************************************************************************/
 INT8U MCP_CAN::mcp2515_setCANCTRL_Mode(const INT8U newmode)
 {
-	// If the chip is asleep and we want to change mode then a manual wake needs to be done
-	// This is done by setting the wake up interrupt flag
-	// This undocumented trick was found at https://github.com/mkleemann/can/blob/master/can_sleep_mcp2515.c
-	if((mcp2515_readRegister(MCP_CANSTAT) & MODE_MASK) == MCP_SLEEP && newmode != MCP_SLEEP)
-	{
-		// Make sure wake interrupt is enabled
-		byte wakeIntEnabled = (mcp2515_readRegister(MCP_CANINTE) & MCP_WAKIF);
-		if(!wakeIntEnabled)
-			mcp2515_modifyRegister(MCP_CANINTE, MCP_WAKIF, MCP_WAKIF);
+    // If the chip is asleep and we want to change mode then a manual wake needs to be done
+    // This is done by setting the wake up interrupt flag
+    // This undocumented trick was found at https://github.com/mkleemann/can/blob/master/can_sleep_mcp2515.c
+    if((mcp2515_readRegister(MCP_CANSTAT) & MODE_MASK) == MCP_SLEEP && newmode != MCP_SLEEP)
+    {
+        // Make sure wake interrupt is enabled
+        byte wakeIntEnabled = (mcp2515_readRegister(MCP_CANINTE) & MCP_WAKIF);
+        if(!wakeIntEnabled)
+            mcp2515_modifyRegister(MCP_CANINTE, MCP_WAKIF, MCP_WAKIF);
 
-		// Set wake flag (this does the actual waking up)
-		mcp2515_modifyRegister(MCP_CANINTF, MCP_WAKIF, MCP_WAKIF);
+        // Set wake flag (this does the actual waking up)
+        mcp2515_modifyRegister(MCP_CANINTF, MCP_WAKIF, MCP_WAKIF);
 
-		// Wait for the chip to exit SLEEP and enter LISTENONLY mode.
+        // Wait for the chip to exit SLEEP and enter LISTENONLY mode.
 
-		// If the chip is not connected to a CAN bus (or the bus has no other powered nodes) it will sometimes trigger the wake interrupt as soon
-		// as it's put to sleep, but it will stay in SLEEP mode instead of automatically switching to LISTENONLY mode.
-		// In this situation the mode needs to be manually set to LISTENONLY.
+        // If the chip is not connected to a CAN bus (or the bus has no other powered nodes) it will sometimes trigger the wake interrupt as soon
+        // as it's put to sleep, but it will stay in SLEEP mode instead of automatically switching to LISTENONLY mode.
+        // In this situation the mode needs to be manually set to LISTENONLY.
 
-		if(mcp2515_requestNewMode(MCP_LISTENONLY) != MCP2515_OK)
-			return MCP2515_FAIL;
+        if(mcp2515_requestNewMode(MCP_LISTENONLY) != MCP2515_OK)
+            return MCP2515_FAIL;
 
-		// Turn wake interrupt back off if it was originally off
-		if(!wakeIntEnabled)
-			mcp2515_modifyRegister(MCP_CANINTE, MCP_WAKIF, 0);
-	}
+        // Turn wake interrupt back off if it was originally off
+        if(!wakeIntEnabled)
+            mcp2515_modifyRegister(MCP_CANINTE, MCP_WAKIF, 0);
+    }
 
-	// Clear wake flag
-	mcp2515_modifyRegister(MCP_CANINTF, MCP_WAKIF, 0);
-	
-	return mcp2515_requestNewMode(newmode);
+    // Clear wake flag
+    mcp2515_modifyRegister(MCP_CANINTF, MCP_WAKIF, 0);
+
+    return mcp2515_requestNewMode(newmode);
 }
 
 /*********************************************************************************************************
@@ -208,28 +212,28 @@ INT8U MCP_CAN::mcp2515_setCANCTRL_Mode(const INT8U newmode)
 *********************************************************************************************************/
 INT8U MCP_CAN::mcp2515_requestNewMode(const INT8U newmode)
 {
-	byte startTime = millis();
+    byte startTime = millis();
 
-	// Spam new mode request and wait for the operation  to complete
-	while(1)
-	{
-		// Request new mode
-		// This is inside the loop as sometimes requesting the new mode once doesn't work (usually when attempting to sleep)
-		mcp2515_modifyRegister(MCP_CANCTRL, MODE_MASK, newmode); 
+    // Spam new mode request and wait for the operation  to complete
+    while(1)
+    {
+        // Request new mode
+        // This is inside the loop as sometimes requesting the new mode once doesn't work (usually when attempting to sleep)
+        mcp2515_modifyRegister(MCP_CANCTRL, MODE_MASK, newmode); 
 
-		byte statReg = mcp2515_readRegister(MCP_CANSTAT);
-		if((statReg & MODE_MASK) == newmode) // We're now in the new mode
-			return MCP2515_OK;
-		else if((byte)(millis() - startTime) > 200) // Wait no more than 200ms for the operation to complete
-			return MCP2515_FAIL;
-	}
+        byte statReg = mcp2515_readRegister(MCP_CANSTAT);
+        if((statReg & MODE_MASK) == newmode) // We're now in the new mode
+            return MCP2515_OK;
+        else if((byte)(millis() - startTime) > 200) // Wait no more than 200ms for the operation to complete
+            return MCP2515_FAIL;
+    }
 }
 
 /*********************************************************************************************************
 ** Function name:           mcp2515_configRate
 ** Descriptions:            Set baudrate
 *********************************************************************************************************/
-INT8U MCP_CAN::mcp2515_configRate(const INT8U canSpeed, const INT8U canClock)            
+INT8U MCP_CAN::mcp2515_configRate(const INT8U canSpeed, const INT8U canClock)
 {
     INT8U set, cfg1, cfg2, cfg3;
     set = 1;
@@ -238,31 +242,31 @@ INT8U MCP_CAN::mcp2515_configRate(const INT8U canSpeed, const INT8U canClock)
         case (MCP_8MHZ):
         switch (canSpeed) 
         {
-            case (CAN_5KBPS):                                               //   5KBPS                  
+            case (CAN_5KBPS):                                               //   5KBPS
             cfg1 = MCP_8MHz_5kBPS_CFG1;
             cfg2 = MCP_8MHz_5kBPS_CFG2;
             cfg3 = MCP_8MHz_5kBPS_CFG3;
             break;
 
-            case (CAN_10KBPS):                                              //  10KBPS                  
+            case (CAN_10KBPS):                                              //  10KBPS
             cfg1 = MCP_8MHz_10kBPS_CFG1;
             cfg2 = MCP_8MHz_10kBPS_CFG2;
             cfg3 = MCP_8MHz_10kBPS_CFG3;
             break;
 
-            case (CAN_20KBPS):                                              //  20KBPS                  
+            case (CAN_20KBPS):                                              //  20KBPS
             cfg1 = MCP_8MHz_20kBPS_CFG1;
             cfg2 = MCP_8MHz_20kBPS_CFG2;
             cfg3 = MCP_8MHz_20kBPS_CFG3;
             break;
 
-            case (CAN_31K25BPS):                                            //  31.25KBPS                  
+            case (CAN_31K25BPS):                                            //  31.25KBPS
             cfg1 = MCP_8MHz_31k25BPS_CFG1;
             cfg2 = MCP_8MHz_31k25BPS_CFG2;
             cfg3 = MCP_8MHz_31k25BPS_CFG3;
             break;
 
-            case (CAN_33K3BPS):                                             //  33.33KBPS                  
+            case (CAN_33K3BPS):                                             //  33.33KBPS
             cfg1 = MCP_8MHz_33k3BPS_CFG1;
             cfg2 = MCP_8MHz_33k3BPS_CFG2;
             cfg3 = MCP_8MHz_33k3BPS_CFG3;
@@ -324,8 +328,7 @@ INT8U MCP_CAN::mcp2515_configRate(const INT8U canSpeed, const INT8U canClock)
 
             default:
             set = 0;
-	    return MCP2515_FAIL;
-            break;
+            return MCP2515_FAIL;
         }
         break;
 
@@ -411,8 +414,7 @@ INT8U MCP_CAN::mcp2515_configRate(const INT8U canSpeed, const INT8U canClock)
 
             default:
             set = 0;
-	    return MCP2515_FAIL;
-            break;
+            return MCP2515_FAIL;
         }
         break;
         
@@ -466,7 +468,7 @@ INT8U MCP_CAN::mcp2515_configRate(const INT8U canSpeed, const INT8U canClock)
             cfg2 = MCP_20MHz_500kBPS_CFG2;
             cfg3 = MCP_20MHz_500kBPS_CFG3;
             break;
-        
+
             case (CAN_1000KBPS):                                            //   1Mbps
             cfg1 = MCP_20MHz_1000kBPS_CFG1;
             cfg2 = MCP_20MHz_1000kBPS_CFG2;
@@ -476,18 +478,12 @@ INT8U MCP_CAN::mcp2515_configRate(const INT8U canSpeed, const INT8U canClock)
             default:
             set = 0;
             return MCP2515_FAIL;
-            break;
         }
         break;
         
         default:
         set = 0;
-	return MCP2515_FAIL;
-        break;
-    }
-
-    if (canClock & MCP_CLKOUT_ENABLE) {
-        cfg3 &= (~SOF_ENABLE);
+        return MCP2515_FAIL;
     }
 
     if (set) {
@@ -513,24 +509,24 @@ void MCP_CAN::mcp2515_initCANBuffers(void)
     INT32U ulMask = 0x00, ulFilt = 0x00;
 
 
-    mcp2515_write_mf(MCP_RXM0SIDH, ext, ulMask);			/*Set both masks to 0           */
-    mcp2515_write_mf(MCP_RXM1SIDH, ext, ulMask);			/*Mask register ignores ext bit */
-    
-                                                                        /* Set all filters to 0         */
-    mcp2515_write_mf(MCP_RXF0SIDH, ext, ulFilt);			/* RXB0: extended               */
-    mcp2515_write_mf(MCP_RXF1SIDH, std, ulFilt);			/* RXB1: standard               */
-    mcp2515_write_mf(MCP_RXF2SIDH, ext, ulFilt);			/* RXB2: extended               */
-    mcp2515_write_mf(MCP_RXF3SIDH, std, ulFilt);			/* RXB3: standard               */
+    mcp2515_write_mf(MCP_RXM0SIDH, ext, ulMask);            /*Set both masks to 0           */
+    mcp2515_write_mf(MCP_RXM1SIDH, ext, ulMask);            /*Mask register ignores ext bit */
+
+                                                            /* Set all filters to 0         */
+    mcp2515_write_mf(MCP_RXF0SIDH, ext, ulFilt);            /* RXB0: extended               */
+    mcp2515_write_mf(MCP_RXF1SIDH, std, ulFilt);            /* RXB1: standard               */
+    mcp2515_write_mf(MCP_RXF2SIDH, ext, ulFilt);            /* RXB2: extended               */
+    mcp2515_write_mf(MCP_RXF3SIDH, std, ulFilt);            /* RXB3: standard               */
     mcp2515_write_mf(MCP_RXF4SIDH, ext, ulFilt);
     mcp2515_write_mf(MCP_RXF5SIDH, std, ulFilt);
 
-                                                                        /* Clear, deactivate the three  */
-                                                                        /* transmit buffers             */
-                                                                        /* TXBnCTRL -> TXBnD7           */
+                                                            /* Clear, deactivate the three  */
+                                                            /* transmit buffers             */
+                                                            /* TXBnCTRL -> TXBnD7           */
     a1 = MCP_TXB0CTRL;
     a2 = MCP_TXB1CTRL;
     a3 = MCP_TXB2CTRL;
-    for (i = 0; i < 14; i++) {                                          /* in-buffer loop               */
+    for (i = 0; i < 14; i++) {                              /* in-buffer loop               */
         mcp2515_setRegister(a1, 0);
         mcp2515_setRegister(a2, 0);
         mcp2515_setRegister(a3, 0);
@@ -549,10 +545,10 @@ void MCP_CAN::mcp2515_initCANBuffers(void)
 INT8U MCP_CAN::mcp2515_init(const INT8U canIDMode, const INT8U canSpeed, const INT8U canClock)
 {
 
-  INT8U res;
+    INT8U res;
 
     mcp2515_reset();
-    
+
     mcpMode = MCP_LOOPBACK;
 
     res = mcp2515_setCANCTRL_Mode(MODE_CONFIG);
@@ -587,10 +583,10 @@ INT8U MCP_CAN::mcp2515_init(const INT8U canIDMode, const INT8U canSpeed, const I
                                                                         /* interrupt mode               */
         mcp2515_setRegister(MCP_CANINTE, MCP_RX0IF | MCP_RX1IF);
 
-	//Sets BF pins as GPO
-	mcp2515_setRegister(MCP_BFPCTRL,MCP_BxBFS_MASK | MCP_BxBFE_MASK);
-	//Sets RTS pins as GPI
-	mcp2515_setRegister(MCP_TXRTSCTRL,0x00);
+        //Sets BF pins as GPO
+        mcp2515_setRegister(MCP_BFPCTRL,MCP_BxBFS_MASK | MCP_BxBFE_MASK);
+        //Sets RTS pins as GPI
+        mcp2515_setRegister(MCP_TXRTSCTRL,0x00);
 
         switch(canIDMode)
         {
@@ -625,22 +621,21 @@ INT8U MCP_CAN::mcp2515_init(const INT8U canIDMode, const INT8U canSpeed, const I
             mcp2515_modifyRegister(MCP_RXB1CTRL, MCP_RXB_RX_MASK,
             MCP_RXB_RX_STDEXT);
             break;
-    
+
             default:
-#if DEBUG_MODE        
+#if DEBUG_MODE
             Serial.println(F("`Setting ID Mode Failure..."));
 #endif           
             return MCP2515_FAIL;
             break;
-}    
-
+}
 
         res = mcp2515_setCANCTRL_Mode(mcpMode);                                                                
         if(res)
         {
-#if DEBUG_MODE        
+#if DEBUG_MODE
           Serial.println(F("Returning to Previous Mode Failure..."));
-#endif           
+#endif
           return res;
         }
 
@@ -748,9 +743,9 @@ void MCP_CAN::mcp2515_write_canMsg( const INT8U buffer_sidh_addr)
     INT8U mcp_addr;
     mcp_addr = buffer_sidh_addr;
     mcp2515_setRegisterS(mcp_addr+5, m_nDta, m_nDlc );                  /* write data bytes             */
-	
+
     if ( m_nRtr == 1)                                                   /* if RTR set bit in byte       */
-        m_nDlc |= MCP_RTR_MASK;  
+        m_nDlc |= MCP_RTR_MASK;
 
     mcp2515_setRegister((mcp_addr+4), m_nDlc );                         /* write the RTR and DLC        */
     mcp2515_write_id(mcp_addr, m_nExtFlg, m_nID );                      /* write CAN id                 */
@@ -798,7 +793,7 @@ INT8U MCP_CAN::mcp2515_getNextFreeTXBuf(INT8U *txbuf_n)                 /* get N
         ctrlval = mcp2515_readRegister( ctrlregs[i] );
         if ( (ctrlval & MCP_TXB_TXREQ_M) == 0 ) {
             *txbuf_n = ctrlregs[i]+1;                                   /* return SIDH-address of Buffer*/
-            
+
             res = MCP2515_OK;
             return res;                                                 /* ! function exit              */
         }
@@ -848,9 +843,9 @@ INT8U MCP_CAN::init_Mask(INT8U num, INT8U ext, INT32U ulData)
 #if DEBUG_MODE
     Serial.println(F("Entering Configuration Mode Failure...")); 
 #endif
-	return res;
-     }
-    
+        return res;
+    }
+
     if (num == 0){
         mcp2515_write_mf(MCP_RXM0SIDH, ext, ulData);
 
@@ -866,7 +861,7 @@ INT8U MCP_CAN::init_Mask(INT8U num, INT8U ext, INT32U ulData)
     Serial.println(F("Entering Previous Mode Failure...")); 
 	Serial.println(F("Setting Mask Failure..."));
 #endif
-	return res;
+    return res;
     }
 #if DEBUG_MODE
     Serial.println(F("Setting Mask Successful!"));
@@ -1045,7 +1040,7 @@ INT8U MCP_CAN::init_Filt(INT8U num, INT32U ulData)
     Serial.println(F("Entering Previous Mode Failure...")); 
 	Serial.println(F("Setting Filter Failure..."));
 #endif
-      return res;
+        return res;
     }
 #if DEBUG_MODE
     Serial.println(F("Setting Filter Successful!"));
@@ -1067,7 +1062,7 @@ INT8U MCP_CAN::setMsg(INT32U id, INT8U rtr, INT8U ext, INT8U len, INT8U *pData)
     m_nDlc    = len;
     for(i = 0; i<MAX_CHAR_IN_MESSAGE; i++)
         m_nDta[i] = *(pData+i);
-	
+
     return MCP2515_OK;
 }
 
@@ -1105,7 +1100,7 @@ INT8U MCP_CAN::sendMsg()
     } while (res == MCP_ALLTXBUSY && (uiTimeOut < TIMEOUTVALUE));
 
     if(uiTimeOut >= TIMEOUTVALUE) 
-    {   
+    {
         return CAN_GETTXBFTIMEOUT;                                      /* get tx buff time out         */
     }
     uiTimeOut = 0;
@@ -1114,15 +1109,15 @@ INT8U MCP_CAN::sendMsg()
     
     temp = micros();
     do
-    {        
+    {
         res1 = mcp2515_readRegister(txbuf_n-1);                         /* read send buff ctrl reg 	*/
-        res1 = res1 & 0x08;                               		
+        res1 = res1 & 0x08;
         uiTimeOut = micros() - temp;
-    } while (res1 && (uiTimeOut < TIMEOUTVALUE));   
-    
+    } while (res1 && (uiTimeOut < TIMEOUTVALUE));
+
     if(uiTimeOut >= TIMEOUTVALUE)                                       /* send msg timeout             */	
         return CAN_SENDMSGTIMEOUT;
-    
+
     return CAN_OK;
 }
 
@@ -1133,10 +1128,10 @@ INT8U MCP_CAN::sendMsg()
 INT8U MCP_CAN::sendMsgBuf(INT32U id, INT8U ext, INT8U len, INT8U *buf)
 {
     INT8U res;
-	
+
     setMsg(id, 0, ext, len, buf);
     res = sendMsg();
-    
+
     return res;
 }
 
@@ -1148,16 +1143,16 @@ INT8U MCP_CAN::sendMsgBuf(INT32U id, INT8U len, INT8U *buf)
 {
     INT8U ext = 0, rtr = 0;
     INT8U res;
-    
+
     if((id & 0x80000000) == 0x80000000)
         ext = 1;
- 
+
     if((id & 0x40000000) == 0x40000000)
         rtr = 1;
-        
+
     setMsg(id, rtr, ext, len, buf);
     res = sendMsg();
-    
+
     return res;
 }
 
@@ -1185,7 +1180,7 @@ INT8U MCP_CAN::readMsg()
     }
     else 
         res = CAN_NOMSG;
-    
+
     return res;
 }
 
@@ -1196,8 +1191,8 @@ INT8U MCP_CAN::readMsg()
 INT8U MCP_CAN::readMsgBuf(INT32U *id, INT8U *ext, INT8U *len, INT8U buf[])
 {
     if(readMsg() == CAN_NOMSG)
-	return CAN_NOMSG;
-	
+    return CAN_NOMSG;
+
     *id  = m_nID;
     *len = m_nDlc;
     *ext = m_nExtFlg;
@@ -1214,17 +1209,17 @@ INT8U MCP_CAN::readMsgBuf(INT32U *id, INT8U *ext, INT8U *len, INT8U buf[])
 INT8U MCP_CAN::readMsgBuf(INT32U *id, INT8U *len, INT8U buf[])
 {
     if(readMsg() == CAN_NOMSG)
-	return CAN_NOMSG;
+    return CAN_NOMSG;
 
     if (m_nExtFlg)
         m_nID |= 0x80000000;
 
     if (m_nRtr)
         m_nID |= 0x40000000;
-	
+
     *id  = m_nID;
     *len = m_nDlc;
-    
+
     for(int i = 0; i<m_nDlc; i++)
         buf[i] = m_nDta[i];
 
@@ -1272,7 +1267,7 @@ INT8U MCP_CAN::getError(void)
 ** Function name:           mcp2515_errorCountRX
 ** Descriptions:            Returns REC register value
 *********************************************************************************************************/
-INT8U MCP_CAN::errorCountRX(void)                             
+INT8U MCP_CAN::errorCountRX(void)
 {
     return mcp2515_readRegister(MCP_REC);
 }
@@ -1281,7 +1276,7 @@ INT8U MCP_CAN::errorCountRX(void)
 ** Function name:           mcp2515_errorCountTX
 ** Descriptions:            Returns TEC register value
 *********************************************************************************************************/
-INT8U MCP_CAN::errorCountTX(void)                             
+INT8U MCP_CAN::errorCountTX(void)
 {
     return mcp2515_readRegister(MCP_TEC);
 }
@@ -1294,16 +1289,16 @@ INT8U MCP_CAN::enOneShotTX(void)
 {
     mcp2515_modifyRegister(MCP_CANCTRL, MODE_ONESHOT, MODE_ONESHOT);
     if((mcp2515_readRegister(MCP_CANCTRL) & MODE_ONESHOT) != MODE_ONESHOT)
-	    return CAN_FAIL;
+        return CAN_FAIL;
     else
-	    return CAN_OK;
+        return CAN_OK;
 }
 
 /*********************************************************************************************************
 ** Function name:           mcp2515_disOneShotTX
 ** Descriptions:            Disables one shot transmission mode
 *********************************************************************************************************/
-INT8U MCP_CAN::disOneShotTX(void)                             
+INT8U MCP_CAN::disOneShotTX(void)
 {
     mcp2515_modifyRegister(MCP_CANCTRL, MODE_ONESHOT, 0);
     if((mcp2515_readRegister(MCP_CANCTRL) & MODE_ONESHOT) != 0)
@@ -1316,15 +1311,15 @@ INT8U MCP_CAN::disOneShotTX(void)
 ** Function name:           mcp2515_abortTX
 ** Descriptions:            Aborts any queued transmissions
 *********************************************************************************************************/
-INT8U MCP_CAN::abortTX(void)                             
+INT8U MCP_CAN::abortTX(void)
 {
     mcp2515_modifyRegister(MCP_CANCTRL, ABORT_TX, ABORT_TX);
-	
+
     // Maybe check to see if the TX buffer transmission request bits are cleared instead?
     if((mcp2515_readRegister(MCP_CANCTRL) & ABORT_TX) != ABORT_TX)
-	    return CAN_FAIL;
+        return CAN_FAIL;
     else
-	    return CAN_OK;
+        return CAN_OK;
 }
 
 /*********************************************************************************************************
@@ -1334,7 +1329,7 @@ INT8U MCP_CAN::abortTX(void)
 INT8U MCP_CAN::setGPO(INT8U data)
 {
     mcp2515_modifyRegister(MCP_BFPCTRL, MCP_BxBFS_MASK, (data<<4));
-	    
+
     return 0;
 }
 

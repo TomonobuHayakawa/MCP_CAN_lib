@@ -8,8 +8,8 @@
 #include <SPI.h>
 #include <avr/sleep.h>
 
-#define CAN0_INT 2 // Set INT to pin 2
-MCP_CAN CAN0(10); // Set CS to pin 10
+#define CAN0_INT 20 // Set INT to pin 20
+MCP_CAN CAN0(19);   // Set CS to pin 19
 
 void setup()
 {

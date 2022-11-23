@@ -21,7 +21,7 @@ byte len = 0;
 byte rxBuf[8];
 char buffer[50];
 
-MCP_CAN CAN0(9);                                   // Set CS to pin 9
+MCP_CAN CAN0(19);                                   // Set CS to pin 19
 
 EthernetUDP UDP;
 void setup()

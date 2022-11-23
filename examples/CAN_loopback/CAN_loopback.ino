@@ -23,25 +23,24 @@ unsigned char rxBuf[8];
 char msgString[128];
 
 // CAN0 INT and CS
-#define CAN0_INT 2                              // Set INT to pin 2
-MCP_CAN CAN0(10);                               // Set CS to pin 10
-
+#define CAN0_INT 20                              // Set INT to pin 20
+MCP_CAN CAN0(19);                                // Set CS to pin  19
 
 void setup()
 {
   Serial.begin(115200);  // CAN is running at 500,000BPS; 115,200BPS is SLOW, not FAST, thus 9600 is crippling.
-  
+
   // Initialize MCP2515 running at 16MHz with a baudrate of 500kb/s and the masks and filters disabled.
-  if(CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_16MHZ) == CAN_OK)
+  if(CAN0.begin(MCP_ANY, CAN_1000KBPS, MCP_16MHZ) == CAN_OK)
     Serial.println("MCP2515 Initialized Successfully!");
   else
     Serial.println("Error Initializing MCP2515...");
-  
+
   // Since we do not set NORMAL mode, we are in loopback mode by default.
   //CAN0.setMode(MCP_NORMAL);
 
   pinMode(CAN0_INT, INPUT);                           // Configuring pin for /INT input
-  
+
   Serial.println("MCP2515 Library Loopback Example...");
 }
 
@@ -49,15 +48,21 @@ void loop()
 {
   if(!digitalRead(CAN0_INT))                          // If CAN0_INT pin is low, read receive buffer
   {
-    CAN0.readMsgBuf(&rxId, &len, rxBuf);              // Read data: len = data length, buf = data byte(s)
-    
+    uint8_t ret = CAN0.readMsgBuf(&rxId, &len, rxBuf);              // Read data: len = data length, buf = data byte(s)
+
+    if ( ret != CAN_OK ) {
+      Serial.print("readMsgBuf ret = ");
+      Serial.print(ret);
+      Serial.println(" error");
+    }
+
     if((rxId & 0x80000000) == 0x80000000)             // Determine if ID is standard (11 bits) or extended (29 bits)
       sprintf(msgString, "Extended ID: 0x%.8lX  DLC: %1d  Data:", (rxId & 0x1FFFFFFF), len);
     else
       sprintf(msgString, "Standard ID: 0x%.3lX       DLC: %1d  Data:", rxId, len);
-  
+
     Serial.print(msgString);
-  
+
     if((rxId & 0x40000000) == 0x40000000){            // Determine if message is a remote request frame.
       sprintf(msgString, " REMOTE REQUEST FRAME");
       Serial.print(msgString);
@@ -67,14 +72,14 @@ void loop()
         Serial.print(msgString);
       }
     }
-        
+
     Serial.println();
   }
-  
+
   if(millis() - prevTX >= invlTX){                    // Send this at a one second interval. 
     prevTX = millis();
     byte sndStat = CAN0.sendMsgBuf(0x100, 8, data);
-    
+
     if(sndStat == CAN_OK)
       Serial.println("Message Sent Successfully!");
     else

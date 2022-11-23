@@ -37,8 +37,8 @@ byte rxBuf[8];
 char msgString[128];                        // Array to store serial string
 
 // CAN Interrupt and Chip Select Pins
-#define CAN0_INT 2                              /* Set INT to pin 2 (This rarely changes)   */
-MCP_CAN CAN0(9);                                /* Set CS to pin 9 (Old shields use pin 10) */
+#define CAN0_INT 20                              /* Set INT to pin 20 (This rarely changes)   */
+MCP_CAN CAN0(19);                                /* Set CS to pin 19 (Old shields use pin 10) */
 
 
 void setup(){
